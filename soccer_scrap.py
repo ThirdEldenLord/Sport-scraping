@@ -15,7 +15,7 @@ driver = webdriver.Chrome(service=Service(executable_path="D:/Кирилл/Other
 
 #Login into account using your username and password 
 def login(username, password):
-    driver.get('https://www.oddsportal.com/login/')
+    driver.get('(our website)')
     time.sleep(2)
     driver.find_element(By.XPATH, '//*[@id="onetrust-accept-btn-handler"]').click()
     time.sleep(2)
@@ -25,18 +25,15 @@ def login(username, password):
     time.sleep(2)
     return login
 
-#Create a list with chosen bettors from premade excel file
+#Create a list with chosen users from premade excel file
 def bettors_list():
-    df = pd.read_excel('Soccer_bettors.xlsx', sheet_name=0)
-    # df = df.drop(columns=['Unnamed: 5', 'Unnamed: 6'])
-    # df = df.drop(df[df['1x2 ROI'] < 0.05].index)
-    our_bettors = df['Username'].to_list()
-    return our_bettors
+    df = pd.read_excel('our_file.xlsx', sheet_name=0)
+    our_users = df['Username'].to_list()
+    return our_users
 
-#Find how much pages with new predictions one particular bettor from our list have
-def pages_num(bettor):
-    # bettor = 'petersson1984'
-    driver.get(f'https://www.oddsportal.com/profile/{bettor}/my-predictions/next/')
+#Find how much pages with new information one particular user from our list have
+def pages_num(user):
+    driver.get(f'https://www.(website).com/profile/{user}/.../.../')
     content = driver.page_source
     soup = BeautifulSoup(content, features="html.parser")
 
@@ -51,11 +48,9 @@ def pages_num(bettor):
         pages = [1]
     return pages
 
-#Collect info from one page in one bettor next predictions pages
-def one_page_scrap(bettor, page):
-    # bettor = 'petersson1984'
-    # page = '1'
-    driver.get(f'https://www.oddsportal.com/profile/{bettor}/my-predictions/next/page/{page}/')
+#Collect info from one page in one user next info
+def one_page_scrap(user, page):
+    driver.get(f'https://www.(website).com/profile/{user}/.../.../.../{page}/')
     time.sleep(1)
     content = driver.page_source
     soup = BeautifulSoup(content, features="html.parser")
@@ -78,148 +73,146 @@ def one_page_scrap(bettor, page):
     sports_df = pd.DataFrame(sports)
     sports_df = sports_df.rename(columns={0:'Sport', 1:'Country', 2:'League'})
     
-    #Creating a Dataframe with teams and Bet_type
+    #Creating a Dataframe with teams and info
     teams = []
     for all_teams in soup.find_all('td', attrs={'class': 'table-participant'}):
         team = all_teams.find('strong')
         teams.append(team.text)
 
-    bet_types = []
-    for all_bets in soup.find_all('td', attrs={'class': 'table-participant'}):
-        bet = all_bets.find('a', attrs={'class': 'number2'})
-        bet_types.append(bet.text)
-    teams_df = pd.DataFrame({'Teams': teams, 'Bet_type': bet_types})
+    info_types = []
+    for all_info in soup.find_all('td', attrs={'class': 'table-participant'}):
+        info = all_info.find('a', attrs={'class': 'number2'})
+        info_types.append(info.text)
+    teams_df = pd.DataFrame({'Teams': teams, 'info_type': info_types})
     
-    #Creating a DataFrame with odds
-    odds = []
-    for all_odds in soup.find('div', attrs={'id': 'col-content'}).find_all('tr', attrs={'class':['odd', 'even']}):
-        odd = all_odds.find_all('td', attrs={'class': 'center table-odds'})
-        row_2 = [str(all_odds.get_text()).strip() for all_odds in odd 
-               if str(all_odds.get_text()).strip()]
-        odds.append(row_2)
-    odds_df = pd.DataFrame(odds)
-    if len(odds_df.columns) == 2:
-        odds_df[2] = np.nan
+    #Creating a DataFrame with info_2
+    infos_2 = []
+    for all_info_2 in soup.find('div', attrs={'id': 'col-content'}).find_all('tr', attrs={'class':['odd', 'even']}):
+        info_2 = all_info_2.find_all('td', attrs={'class': 'center table-odds'})
+        row_2 = [str(all_info_2.get_text()).strip() for all_info_2 in info_2 
+               if str(all_info_2.get_text()).strip()]
+        infos_2.append(row_2)
+    info_2_df = pd.DataFrame(infos_2)
+    if len(info_2_df.columns) == 2:
+        info_2_df[2] = np.nan
     elif len(odds_df.columns) == 1:
-        odds_df[1] = np.nan
-        odds_df[2] = np.nan    
-    odds_df = odds_df.rename(columns = {0:'1', 1:'X', 2:'2'})
+        info_2_df[1] = np.nan
+        info_2_df[2] = np.nan    
+    info_2_df = info_2_df.rename(columns = {0:'a', 1:'b', 2:'c'})
     try:
-        odds_df['2'].fillna(value='-', inplace=True)   
+        info_2_df['c'].fillna(value='-', inplace=True)   
     except:
         pass
     try:
-        odds_df['X'].fillna(value='-', inplace=True)
+        info_2_df['b'].fillna(value='-', inplace=True)
     except:
         pass       
-    odds_df = odds_df.replace(to_replace='None', value=np.nan).dropna()
-    odds_df = odds_df.reset_index(drop=True)
+    info_2_df = info_2_df.replace(to_replace='None', value=np.nan).dropna()
+    info_2_df = info_2_df.reset_index(drop=True)
     
-    #Creating a DataFrame with predictions
-    predictions = []
-    for all_predictions in soup.find_all('tr', attrs={'class': 'pred-usertip'}):
-        prediction = all_predictions.find_all('td')
-        row_3 = [str(all_predictions.get_text()).strip() for all_predictions in prediction] 
-        predictions.append(row_3)
-    predictions_df = pd.DataFrame(predictions)
-    if len(predictions_df.columns) == 2:
-        predictions_df[2] = np.nan
-    elif len(predictions_df.columns) == 1:
-        predictions_df[1] = np.nan
-        predictions_df[2] = np.nan 
-    predictions_df = predictions_df.rename(columns = {0:'Pick_1', 1:'Pick_X', 2:'Pick_2'})
+    #Creating a DataFrame with info_3
+    infos_3 = []
+    for all_info_3 in soup.find_all('tr', attrs={'class': 'pred-usertip'}):
+        info_3 = all_info_3.find_all('td')
+        row_3 = [str(all_info_3.get_text()).strip() for all_info_3 in info_3] 
+        infos_3.append(row_3)
+    info_3_df = pd.DataFrame(infos_3)
+    if len(info_3_df.columns) == 2:
+        info_3_df[2] = np.nan
+    elif len(info_3_df.columns) == 1:
+        info_3_df[1] = np.nan
+        info_3_df[2] = np.nan 
+    info_3_df = info_3_df.rename(columns = {0:'a', 1:'b', 2:'c'})
     try:
-        predictions_df['Pick_X'].fillna(value='-', inplace=True)
+        info_3_df['b'].fillna(value='-', inplace=True)
     except:
         pass
     try:
-        predictions_df['Pick_2'].fillna(value='-', inplace=True)
+        info_3_df['c'].fillna(value='-', inplace=True)
     except:
         pass   
-    predictions_df = predictions_df.replace({'PICK':1, '':0})
+    info_3_df = info_3_df.replace({'abc':1, '':0})
     #Final DataFrame
-    onepage_df = pd.concat([times_df, sports_df, teams_df, odds_df, predictions_df], axis=1)
-    onepage_df.insert(0, 'Bettor', bettor)
+    onepage_df = pd.concat([times_df, sports_df, teams_df, info_2_df, info_3_df], axis=1)
+    onepage_df.insert(0, 'User', user)
     onepage_df.fillna(value='No_info', inplace=True)
     return onepage_df
 
-#Collect all predictions from one bettor
-def one_bettor_scrap(bettor):
-    # bettor = 'petersson1984'
-    onebettor_info = []
-    pages = pages_num(bettor)
+#Collect all new info from one user
+def one_user_scrap(user):
+    oneuser_info = []
+    pages = pages_num(user)
     for x in range(len(pages)):
         page = pages[x]
-        onebettor_info.append(one_page_scrap(bettor, page))
+        oneuser_info.append(one_page_scrap(user, page))
     try:
-        onebettor_df = pd.concat(onebettor_info).reset_index(drop=True)
-        onebettor_df.fillna(value='No_info', inplace=True)
+        oneuser_df = pd.concat(oneuser_info).reset_index(drop=True)
+        oneuser_df.fillna(value='No_info', inplace=True)
     except:
-        onebettor_df = pd.DataFrame()       
-    return onebettor_df
+        oneuser_df = pd.DataFrame()       
+    return oneuser_df
 
-#Collect all predictions from all bettors from our list
-def all_bettors_scrap():
-    all_bettors_info = []
-    bettors = bettors_list()
-    for bettor in bettors:
-        pred_table = one_bettor_scrap(bettor)
-        if len(pred_table) > 0:
-            all_bettors_info.append(pred_table)
-    all_bettors_df = pd.concat(all_bettors_info).reset_index(drop=True)
-    return all_bettors_df
+#Collect all info from all users from our list
+def all_users_scrap():
+    all_users_info = []
+    users = users_list()
+    for user in users:
+        info_table = one_user_scrap(user)
+        if len(info_table) > 0:
+            all_users_info.append(info_table)
+    all_users_df = pd.concat(all_users_info).reset_index(drop=True)
+    return all_users_df
 
 #Sorting data by sport
 def sorting_by_sport(sport):
-    final_df = all_bettors_scrap()
+    final_df = all_users_scrap()
     sorting_by_sport_df = final_df.loc[final_df['Sport'] == sport].reset_index(drop=True)
     return sorting_by_sport_df
 
-#Sorting data by bet
-def sorting_by_bet(bet):
-    final_df = all_bettors_scrap()
-    sorting_by_bet_df = final_df.loc[final_df['Bet_type'] == bet].reset_index(drop=True)
-    return sorting_by_bet_df
+#Sorting data by info type
+def sorting_by_info(info):
+    final_df = all_users_scrap()
+    sorting_by_info_df = final_df.loc[final_df['Info_type'] == info].reset_index(drop=True)
+    return sorting_by_info_df
 
-#Sorting our data by particular sport and Bet_type
-def sorting(sport, bet):
-    final_df = all_bettors_scrap()
-    sorting_df = final_df.loc[(final_df['Sport'] == sport) & (final_df['Bet_type'] == bet)].reset_index(drop=True)
-    sorting_df.to_excel('Soccer_sorting_predictions.xlsx', index=False)
+#Sorting our data by particular sport and info type
+def sorting(sport, info):
+    final_df = all_users_scrap()
+    sorting_df = final_df.loc[(final_df['Sport'] == sport) & (final_df['Info_type'] == info)].reset_index(drop=True)
+    sorting_df.to_excel('sorting_info.xlsx', index=False)
     return sorting_df
 
-#Making excel file with all predictions
+#Making excel file with all new info
 def all_info_excel():
-    all_info = all_bettors_scrap()
-    all_info.to_excel('All predictions.xlsx', index=False)
+    all_info = all_users_scrap()
+    all_info.to_excel('All_info.xlsx', index=False)
     return all_info_excel
 
 #Making excel file with data after sorting   
-def sorting_excel(sport,bet):
-    sort = sorting(sport, bet)  
-    sort.to_excel('Sorting predictions.xlsx', index=False)
+def sorting_excel(sport, info):
+    sort = sorting(sport, info)  
+    sort.to_excel('Sorting.xlsx', index=False)
     return sorting_excel 
 
 #Final result
 def result():
-    res_df = sorting('Soccer', '1X2')
-    res_df['Pick_1'] = res_df['Pick_1'].astype(float)
-    res_df['Pick_X'] = res_df['Pick_X'].astype(float)
-    res_df['Pick_2'] = res_df['Pick_2'].astype(float)
-    result_df = res_df.pivot_table(index=['Teams'], values=['Pick_1', 'Pick_X', 'Pick_2'], aggfunc=np.sum, fill_value=0).reset_index()
-    result_df['Amount_of_pred'] = result_df['Pick_1'] + result_df['Pick_X'] + result_df['Pick_2']
-    result_df = result_df.sort_values(by='Amount_of_pred', ascending=False).reset_index(drop=True)
-    merge_df = res_df[['Teams', 'Country', 'League', 'Day_and_time', '1', 'X', '2']].copy()
+    res_df = sorting('Sport', 'info')
+    res_df['a'] = res_df['a'].astype(float)
+    res_df['b'] = res_df['b'].astype(float)
+    res_df['c'] = res_df['c'].astype(float)
+    result_df = res_df.pivot_table(index=['Teams'], values=['a', 'b', 'c'], aggfunc=np.sum, fill_value=0).reset_index()
+    result_df['Amount_of_info'] = result_df['a'] + result_df['b'] + result_df['c']
+    result_df = result_df.sort_values(by='Amount_of_info', ascending=False).reset_index(drop=True)
+    merge_df = res_df[['Teams', 'Country', 'League', 'Day_and_time', 'a', 'b', 'c']].copy()
     result_df = result_df.merge(merge_df, on='Teams', how='left')
     result_df = result_df.drop_duplicates(subset=['Teams']).reset_index(drop=True)
-    result_df = result_df[['Day_and_time', 'Teams', 'Country', 'League', '1', 'X', '2', 'Pick_1', 'Pick_X', 'Pick_2', 'Amount_of_pred']]
-    # result_df = result_df[result_df['Day_and_time'].str.contains('To', regex=False)].reset_index(drop=True) 
-    result_df.to_excel('Soccer_result.xlsx', index=False)
+    result_df = result_df[['Day_and_time', 'Teams', 'Country', 'League', 'a', 'b', 'c', 'a', 'b', 'c', 'Amount_of_info']]
+    result_df.to_excel('result.xlsx', index=False)
     return result
 
 #Main function
 def main():
-    login('VermontCoders', 'Vermont')
+    login('login', 'password')
     result()
     time.sleep(2)
     driver.close()          
@@ -228,20 +221,3 @@ def main():
 
 
 main()
-
-#For some testing 
-# login('VermontCoders', 'Vermont')
-
-# all_info_excel()
-# sorting_excel('Soccer', '1X2')
-# print(one_page_scrap('papmakis3', '1'))
-# print(pages_num('petersson1984'))
-# print(one_bettor_scrap('Fab10_MediaPronos'))
-# print(all_bettors_scrap())
-# print(sorting('Soccer', '1X2'))
-# print(bettors_list())
-# print(result())
-
-# time.sleep(2)
-# driver.close()          
-# driver.quit()
