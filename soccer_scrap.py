@@ -26,7 +26,7 @@ def login(username, password):
     return login
 
 #Create a list with chosen users from premade excel file
-def bettors_list():
+def users_list():
     df = pd.read_excel('our_file.xlsx', sheet_name=0)
     our_users = df['Username'].to_list()
     return our_users
